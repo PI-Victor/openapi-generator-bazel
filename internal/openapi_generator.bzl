@@ -2,7 +2,11 @@
 
 load("@bazel_tools//tools/build_defs/repo:jvm.bzl", "jvm_maven_import_external")
 
-def openapi_tools_generator_bazel_repositories(openapi_generator_cli_version = "5.0.1", sha256 = "e4e45d5441283b2f0f4bf988d02186b85425e7b708b4be0b06e3bfd7c7aa52c7", prefix = "openapi_tools_generator_bazel"):
+def openapi_tools_generator_bazel_repositories(
+        name = "openapi-generator-cli",
+        openapi_generator_cli_version = "5.0.1",
+        sha256 = "e4e45d5441283b2f0f4bf988d02186b85425e7b708b4be0b06e3bfd7c7aa52c7",
+        prefix = "openapi_tools_generator_bazel"):
     jvm_maven_import_external(
         name = "openapi_tools_generator_bazel_cli",
         artifact_sha256 = sha256,
@@ -30,7 +34,6 @@ def _new_generator_command(ctx, declared_dir, rjars):
     jar_delimiter = ":"
     if ctx.attr.is_windows:
         jar_delimiter = ";"
-
     jars = [ctx.file.openapi_generator_cli] + rjars.to_list()
 
     gen_cmd += " -cp \"{jars}\" org.openapitools.codegen.OpenAPIGenerator generate -i {spec} -g {generator} -o {output}".format(
@@ -87,10 +90,12 @@ def _impl(ctx):
     (cjars, rjars) = (jars.compiletime, jars.runtime)
 
     declared_dir = ctx.actions.declare_directory("%s" % (ctx.attr.name))
-
+    print(declared_dir.path)
+    print(ctx.file.ignore_file.path)
     inputs = [
         ctx.file.openapi_generator_cli,
         ctx.file.spec,
+        ctx.file.ignore_file,
     ] + cjars.to_list() + rjars.to_list()
 
     # TODO: Convert to run
@@ -125,7 +130,7 @@ def _collect_jars(targets):
             runtime_jars = depset(transitive = [runtime_jars, target.scala.transitive_runtime_exports])
             found = True
         if hasattr(target, "JavaInfo"):
-            # see JavaSkylarkApiProvider.java,
+            # see JavaStarlarkApiProvider.java,
             # this is just the compile-time deps
             # this should be improved in bazel 0.1.5 to get outputs.ijar
             # compile_jars = depset(transitive = [compile_jars, [target.java.outputs.ijar]])
@@ -153,6 +158,7 @@ _openapi_generator = rule(
             ],
         ),
         "generator": attr.string(mandatory = True),
+        "ignore_file": attr.label(allow_single_file = [".openapi-generator-ignore"]),
         "api_package": attr.string(),
         "invoker_package": attr.string(),
         "model_package": attr.string(),

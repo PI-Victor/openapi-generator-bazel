@@ -2,9 +2,15 @@
 
 load("@openapi_tools_generator_bazel//:defs.bzl", "openapi_generator")
 
+filegroup(
+    name = "ignore",
+    srcs = [".openapi-generator-ignore"],
+)
+
 openapi_generator(
     name = "petstore",
-    generator = "go",
+    generator = "go-server",
+    ignore_file = ":ignore",
     spec = "petstore.yaml",
 )
 
